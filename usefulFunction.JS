@@ -1,10 +1,64 @@
 function main()
 {
-	alert(zeroPad(10,10));
+	
+
+
+	alert("start");
+	var terrarium = new Terrarium( thePlan); 
+	alert("middle");
+	terrarium.step(); 
+	alert("print");
+	document.getElementById("demo").innerHTML= terrarium;
 }
+//var output = dom(" DIV", {id: "printOutput"}, dom(" H1", null, "Print output:")); document.body.appendChild( output);
+
+var creatureTypes = new Dictionary(); 
+	creatureTypes.register = function( constructor, character) { constructor.prototype.character = character; this.store( character, constructor); };
+	
+var thePlan =
+  ["############################",
+   "#                      #####",
+   "#    ##                 ####",
+   "#   ####     ~ ~          ##",
+   "#    ##       ~            #",
+   "#                          #",
+   "#                ###       #",
+   "#               #####      #",
+   "#                ###       #",
+   "# %        ###        %    #",
+   "#        #######           #",
+   "############################"];
 
 
-
+function StupidBug() {};
+StupidBug.prototype.act = function(surroundings) {
+  return {type: "move", direction: "s"};
+};
+function forEach(array, action) {
+  for (var i = 0; i < array.length; i++)
+    action(array[i]);
+}
+function bind(func, object) {
+  return function(){
+    return func.apply(object, arguments);
+  };
+}
+var directions = new Dictionary(
+  {"n":  new Point( 0, -1),
+   "ne": new Point( 1, -1),
+   "e":  new Point( 1,  0),
+   "se": new Point( 1,  1),
+   "s":  new Point( 0,  1),
+   "sw": new Point(-1,  1),
+   "w":  new Point(-1,  0),
+   "nw": new Point(-1, -1)});
+   
+function forEachIn(object, action) {
+  for (var property in object) {
+    if (object.hasOwnProperty(property))
+      action(property, object[property]);
+  }
+}
 
 function zeroPad(number, width)
 {
@@ -31,6 +85,11 @@ Dictionary.prototype.contains = function(name) {
 };
 Dictionary.prototype.each = function(action) {
   forEachIn(this.values, action);
+};
+Dictionary.prototype.names = function() {
+  var names = [];
+  this.each(function(name, value) {names.push(name);});
+  return names;
 };
 
 function Point( x, y) { this.x = x; this.y = y; } 
@@ -73,21 +132,19 @@ Grid.prototype.each = function(action)
 };
 
 var wall={};
-function elementFromCharacter( character) 
-{
-	if (character == " ") 
-	{
-		return undefined; 
-	}else if (character == "#") 
-	{
-		return wall;
-	}else if (character == "o") 
-	{
-		return new StupidBug(); 
-	}
+function elementFromCharacter(character) {
+  if (character == " ")
+    return undefined;
+  else if (character == "#")
+    return wall;
+  else if (creatureTypes.contains(character))
+    return new (creatureTypes.lookup(character))();
+  else
+    throw new Error("Unknown character: " + character);
 }
 function Terrarium( plan) 
 { 
+	alert("inside terrarium");
 	var grid = new Grid( plan[ 0]. length, plan.length); 
 	for (var y = 0; y < plan.length; y ++) 
 	{ 
@@ -111,18 +168,108 @@ else return element.character;
 }
 Terrarium.prototype.toString = function() 
 { 
+	alert("inside terrarium to string");
 	var characters = []; 
 	var endOfLine = this.grid.width - 1; 
 	this.grid.each( function( point, value) 
 	{ 
 		characters.push( characterFromElement( value)); 
-		if (point.x == endOfLine) characters.push("\ n"); 
+		if (point.x == endOfLine) 
+		{
+			alert("inside \n");
+			characters.push("\n"); 
+		}
+		
 	}); 
 	return characters.join(""); 
 };
 
 Terrarium.prototype.listActingCreatures = function() 
-{ var found = []; this.grid.each( function( point, value) { if (value != undefined && value.act) found.push({ object: value, point: point}); }); return found; };
+{ var found = []; 
+	this.grid.each( function( point, value) 
+	{ 
+		if (value != undefined && value.act) 
+		{
+			found.push({ object: value, point: point}); 
+		}
+	}); 
+	
+	return found; 
+};
+Terrarium.prototype.listSurroundings = function( center) 
+{ 
+	var result = {}; 
+	var grid = this.grid; 
+	directions.each( function( name, direction) 
+	{ 
+		var place = center.add( direction); 
+		if (grid.isInside( place)) 
+		{
+			result[ name] = characterFromElement( grid.valueAt( place));
+		}else 
+		{
+			result[ name] = "#";
+		}
+	 }); 
+	 return result; 
+};
+Terrarium.prototype.processCreature = function( creature) 
+{ 
+	var action = creature.object.act( this.listSurroundings( creature.point)); 
+	if (action.type == "move" && directions.contains( action.direction)) 
+	{ 
+		var to = creature.point.add( directions.lookup( action.direction)); 
+		if (this.grid.isInside( to) && this.grid.valueAt( to) == undefined) 
+		{
+			this.grid.moveValue( creature.point, to);
+		}
+
+	} else 
+	{ throw new Error(" Unsupported action: " + action.type); }
+ };
+Terrarium.prototype.step = function() {forEach( this.listActingCreatures(), bind( this.processCreature, this)); };
+function BouncingBug() {
+  this.direction = "ne";
+}
+Terrarium.prototype.start = function() {
+  if (!this.running)
+    this.running = setInterval(bind(this.step, this), 500);
+};
+Terrarium.prototype.stop = function() {
+  if (this.running) {
+    clearInterval(this.running);
+    this.running = null;
+  }
+};
+BouncingBug.prototype.act = function(surroundings) {
+  if (surroundings[this.direction] != " ")
+    this.direction = (this.direction == "ne" ? "sw" : "ne");
+  return {type: "move", direction: this.direction};
+};
+BouncingBug.prototype.character = "%";
+
+creatureTypes.register(BouncingBug);
+function randomElement(array) {
+  if (array.length == 0)
+    throw new Error("The array is empty.");
+  return array[Math.floor(Math.random() * array.length)];
+}
+function DrunkBug() {};
+DrunkBug.prototype.act = function(surroundings) {
+  return {type: "move",
+          direction: randomElement(directions.names())};
+};
+DrunkBug.prototype.character = "~";
+
+creatureTypes.register(DrunkBug);
+
+
+
+ 
+
+
+ 
+
 
 
 
