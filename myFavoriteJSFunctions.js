@@ -1,3 +1,18 @@
+Object.prototype.create = function() {
+	console.log("inside create");
+  var object = clone(this);
+  if (typeof object.construct == "function")
+    object.construct.apply(object, arguments);
+  return object;
+};
+Object.prototype.extend = function(properties) {
+  var result = clone(this);
+  forEachIn(properties, function(name, value) {
+    result[name] = value;
+  });
+  return result;
+};
+
 function buildMonthNameModule() {
   var names = ["January", "February", "March", "April",
                "May", "June", "July", "August", "September",
@@ -57,10 +72,10 @@ function parseINI( string) {
 			}); 
 	return categories; 
 }
-function dom(name, attributes /*, children...*/) { 
-	console.log("inside dom");
+function dom(name, attributes ) { 
+	
 	var node = document.createElement(name); 
-	console.log("after var");
+
 	if (attributes) { forEachIn( attributes, function(name, value) { 
 		node.setAttribute(name,value); }); 
 		} 
@@ -69,7 +84,7 @@ function dom(name, attributes /*, children...*/) {
 			if (typeof child == "string") child = document.createTextNode( child); 
 			node.appendChild( child); 
 		} 
-		console.log("return node");
+		
 		return node; 
 }
 function forEach(array, action) {
@@ -109,7 +124,7 @@ function registerEventHandler( node, event, handler) {
 			 });
 			 
 			 
-registerEventHandler( document.body, "keypress", function( event) { 
+registerEventHandler ( document.body, "keypress", function( event) { 
 	event = event || window.event; 
 	var charCode = event.charCode || event.keyCode; 
 	if (charCode) print("Character '", String.fromCharCode( charCode), "' was typed.");
@@ -142,8 +157,9 @@ function addHandler(node, type, handler) {
 function removeHandler( object) { 
 	unregisterEventHandler( object.node, object.type, object.handler); 
 	}
-addHandler( textfield, "focus", function( event) { event.target.style.backgroundColor = "yellow"; }); addHandler( textfield, "blur", function( event) { event.target.style.backgroundColor = ""; });
-addHandler( textfield, "change", function( event) { print(" Content of text field changed to '", event.target.value, "'."); });
+//addHandler(textfield, "focus", function( event) { event.target.style.backgroundColor = "yellow"; }); 
+//addHandler(textfield, "blur", function( event) { event.target.style.backgroundColor = ""; });
+//addHandler(textfield, "change", function( event) { print(" Content of text field changed to '", event.target.value, "'."); });
 (function() {
   var names = ["Sunday", "Monday", "Tuesday", "Wednesday",
                "Thursday", "Friday", "Saturday"];
@@ -159,3 +175,61 @@ addHandler( textfield, "change", function( event) { print(" Content of text fiel
     }
   });
 })();
+function clone(object) {
+  function OneShotConstructor(){}
+  OneShotConstructor.prototype = object;
+  return new OneShotConstructor();
+}
+function zeroPad(number, width)
+{
+	var string = String(Math.round(number));
+	while(string.length<width)
+	{
+		string = "0"+string;
+	}
+	return string;
+	
+}
+
+function Dictionary(startValues) {
+  this.values = startValues || {};
+}
+Dictionary.prototype.store = function(name, value) {
+  this.values[name] = value;
+};
+Dictionary.prototype.lookup = function(name) {
+  return this.values[name];
+};
+Dictionary.prototype.contains = function(name) {
+  return Object.prototype.hasOwnProperty.call(this.values, name) &&
+    Object.prototype.propertyIsEnumerable.call(this.values, name);
+};
+Dictionary.prototype.each = function(action) {
+  forEachIn(this.values, action);
+};
+Dictionary.prototype.names = function() {
+  var names = [];
+  this.each(function(name, value) {names.push(name);});
+  return names;
+};
+
+function Point( x, y) { this.x = x; this.y = y; } 
+Point.prototype.add = function( other) 
+{ 
+	return new Point( this.x + other.x, this.y + other.y); 	
+};
+function method(object, name) {
+  return function() {
+    return object[name].apply(object, arguments);
+  };
+}
+function bind(func, object) {
+  return function(){
+    return func.apply(object, arguments);
+  };
+}
+Object.prototype.hasPrototype = function(prototype) {
+  function DummyConstructor() {}
+  DummyConstructor.prototype = prototype;
+  return this instanceof DummyConstructor;
+};
