@@ -120,14 +120,14 @@ function registerEventHandler( node, event, handler) {
 		}
 		registerEventHandler( document.body, "click", function( event) {
 			 event = event || window.event;
-			 print( event.clientX, ",", event.clientY); 
+			 //print( event.clientX, ",", event.clientY); 
 			 });
 			 
 			 
 registerEventHandler ( document.body, "keypress", function( event) { 
 	event = event || window.event; 
 	var charCode = event.charCode || event.keyCode; 
-	if (charCode) print("Character '", String.fromCharCode( charCode), "' was typed.");
+	//if (charCode) print("Character '", String.fromCharCode( charCode), "' was typed.");
 	 });
 
 function normalizeEvent( event) { 
